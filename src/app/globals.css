@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 35 25% 97%; /* Warm cream background */
+  --foreground: 25 35% 15%; /* Deep warm brown */
+  --muted: 35 20% 92%; /* Soft warm gray */
+  --muted-foreground: 30 15% 50%; /* Muted warm brown */
+  --popover: 35 30% 98%; /* Slightly warmer white */
+  --popover-foreground: 25 35% 15%;
+  --card: 35 30% 98%; /* Warm white cards */
+  --card-foreground: 25 35% 15%;
+  --border: 35 25% 88%; /* Warm light border */
+  --input: 35 25% 94%; /* Warm input background */
+  --primary: 25 45% 20%; /* Rich warm brown */
+  --primary-foreground: 35 30% 98%;
+  --secondary: 35 30% 93%; /* Warm secondary */
+  --secondary-foreground: 25 35% 15%;
+  --accent: 40 40% 90%; /* Soft peach accent */
+  --accent-foreground: 25 35% 15%;
+  --destructive: 5 85% 55%; /* Warmer red */
+  --destructive-foreground: 35 30% 98%;
+
+  --radius: 0.75rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body { @apply bg-background text-foreground; }
