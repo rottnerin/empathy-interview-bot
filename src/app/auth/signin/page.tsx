@@ -4,7 +4,6 @@ import { signIn, getSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui'
-import Image from 'next/image'
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false)
@@ -24,7 +23,11 @@ export default function SignInPage() {
     try {
       setLoading(true)
       setError('')
-      
+
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('guest_access')
+      }
+
       const result = await signIn('google', {
         callbackUrl: '/',
         redirect: false,
@@ -40,6 +43,13 @@ export default function SignInPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleGuestAccess = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('guest_access', 'true')
+    }
+    router.push('/')
   }
 
   return (
@@ -112,6 +122,27 @@ export default function SignInPage() {
                 Only AES email addresses (@aes.ac.in) are permitted to access this application.
               </p>
             </div>
+
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-orange-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="px-2 bg-white text-amber-700">OR</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleGuestAccess}
+              variant="outline"
+              className="w-full border-orange-300 text-amber-900 hover:bg-orange-50"
+            >
+              AIFE Yokohoma
+            </Button>
+
+            <p className="text-xs text-center text-gray-500">
+              Use the AIFE Yokohoma option for guest access outside the AES Google domain.
+            </p>
           </div>
         </div>
       </div>
