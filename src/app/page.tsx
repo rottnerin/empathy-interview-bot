@@ -23,17 +23,42 @@ export default function HomePage() {
   const [speakingUrl, setSpeakingUrl] = useState<string | undefined>()
   const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | undefined>()
   const [showDownloadOptions, setShowDownloadOptions] = useState(false)
+  const [guestAccess, setGuestAccess] = useState(false)
+  const [guestReady, setGuestReady] = useState(false)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const downloadOptionsRef = useRef<HTMLDivElement>(null)
 
-
   useEffect(() => {
-    // Redirect to sign in if not authenticated
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin')
+    if (typeof window === 'undefined') {
+      setGuestReady(true)
       return
     }
-    
+
+    const hasGuestAccess = localStorage.getItem('guest_access') === 'true'
+    setGuestAccess(hasGuestAccess)
+    setGuestReady(true)
+  }, [])
+
+  useEffect(() => {
+    if (!guestReady) return
+
+    // Redirect to sign in if not authenticated and guest access not enabled
+    if (status === 'unauthenticated') {
+      if (guestAccess) {
+        if (!persona && !loadingPersona) {
+          void generatePersona()
+        }
+      } else {
+        router.push('/auth/signin')
+      }
+      return
+    }
+
+    if (guestAccess && typeof window !== 'undefined') {
+      localStorage.removeItem('guest_access')
+      setGuestAccess(false)
+    }
+
     // Verify domain restriction
     if (session && session.user?.email && !session.user.email.endsWith('@aes.ac.in')) {
       signOut({ callbackUrl: '/auth/error?error=AccessDenied' })
@@ -41,10 +66,10 @@ export default function HomePage() {
     }
 
     // Generate default persona on first load if authenticated
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && !persona && !loadingPersona) {
       void generatePersona()
     }
-  }, [status, session, router])
+  }, [status, session, router, guestAccess, guestReady, persona, loadingPersona])
 
   useEffect(() => {
     // Auto-scroll to bottom when messages are added
@@ -225,8 +250,10 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
     setShowDownloadOptions(false)
   }
 
+  const canAccess = guestAccess || (status === 'authenticated' && !!session)
+
   // Show loading state while checking authentication
-  if (status === 'loading') {
+  if (!guestReady || (status === 'loading' && !guestAccess)) {
     return (
       <div className="h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100">
         <div className="text-center">
@@ -238,12 +265,20 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
   }
 
   // Don't render main content if not authenticated
-  if (status === 'unauthenticated' || !session) {
+  if (!canAccess) {
     return null
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/auth/signin' })
+    if (guestAccess) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('guest_access')
+      }
+      setGuestAccess(false)
+      router.push('/auth/signin')
+    } else {
+      await signOut({ callbackUrl: '/auth/signin' })
+    }
   }
 
   return (
@@ -253,7 +288,7 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-amber-700">
             <User className="h-4 w-4" />
-            <span>{session.user?.name || session.user?.email}</span>
+            <span>{guestAccess ? 'Guest (AIFE Yokohoma)' : session?.user?.name || session?.user?.email}</span>
           </div>
           <div className="flex items-center gap-2 relative" ref={downloadOptionsRef}>
           <Button 
@@ -287,13 +322,13 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
             </div>
           )}
           </div>
-          <Button 
+          <Button
             onClick={handleSignOut}
             variant="ghost"
             className="text-amber-700 hover:bg-orange-100"
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
+            {guestAccess ? 'Return to Sign In' : 'Sign Out'}
           </Button>
         </div>
       </header>
