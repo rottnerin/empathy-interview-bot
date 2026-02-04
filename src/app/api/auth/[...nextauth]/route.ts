@@ -1,36 +1,41 @@
 import NextAuth from 'next-auth'
-import GoogleProvider from 'next-auth/providers/google'
+import CredentialsProvider from 'next-auth/providers/credentials'
 import type { NextAuthOptions } from 'next-auth'
 
 const authOptions: NextAuthOptions = {
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    CredentialsProvider({
+      name: 'credentials',
+      credentials: {
+        name: { label: 'Name', type: 'text' },
+        email: { label: 'Email', type: 'email' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.name || !credentials?.email) {
+          return null
+        }
+        return {
+          id: credentials.email,
+          name: credentials.name,
+          email: credentials.email,
+        }
+      },
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
-      // Check if the user's email domain is @aes.ac.in
-      if (user.email && user.email.endsWith('@aes.ac.in')) {
-        return true
-      }
-      // Redirect to error page or return false to deny access
-      return false
-    },
     async session({ session, token }) {
-      // Ensure only @aes.ac.in emails are in the session
-      if (session.user?.email && !session.user.email.endsWith('@aes.ac.in')) {
-        throw new Error('Unauthorized domain')
+      if (token) {
+        session.user = {
+          name: token.name,
+          email: token.email,
+        }
       }
       return session
     },
     async jwt({ token, user }) {
       if (user) {
-        // Verify domain on token creation
-        if (user.email && !user.email.endsWith('@aes.ac.in')) {
-          throw new Error('Unauthorized domain')
-        }
+        token.name = user.name
+        token.email = user.email
       }
       return token
     }

@@ -3,24 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: 35 25% 97%; /* Warm cream background */
-  --foreground: 25 35% 15%; /* Deep warm brown */
-  --muted: 35 20% 92%; /* Soft warm gray */
-  --muted-foreground: 30 15% 50%; /* Muted warm brown */
-  --popover: 35 30% 98%; /* Slightly warmer white */
-  --popover-foreground: 25 35% 15%;
-  --card: 35 30% 98%; /* Warm white cards */
-  --card-foreground: 25 35% 15%;
-  --border: 35 25% 88%; /* Warm light border */
-  --input: 35 25% 94%; /* Warm input background */
-  --primary: 25 45% 20%; /* Rich warm brown */
-  --primary-foreground: 35 30% 98%;
-  --secondary: 35 30% 93%; /* Warm secondary */
-  --secondary-foreground: 25 35% 15%;
-  --accent: 40 40% 90%; /* Soft peach accent */
-  --accent-foreground: 25 35% 15%;
-  --destructive: 5 85% 55%; /* Warmer red */
-  --destructive-foreground: 35 30% 98%;
+  --background: 210 20% 98%; /* Soft cool white */
+  --foreground: 220 25% 20%; /* Deep slate */
+  --muted: 210 15% 94%; /* Light cool gray */
+  --muted-foreground: 215 15% 50%; /* Muted slate */
+  --popover: 0 0% 100%; /* Pure white */
+  --popover-foreground: 220 25% 20%;
+  --card: 0 0% 100%; /* White cards */
+  --card-foreground: 220 25% 20%;
+  --border: 214 20% 90%; /* Soft gray border */
+  --input: 214 20% 96%; /* Light input background */
+  --primary: 215 25% 35%; /* Muted slate blue */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 15% 94%; /* Cool gray secondary */
+  --secondary-foreground: 220 25% 20%;
+  --accent: 210 20% 92%; /* Soft accent */
+  --accent-foreground: 220 25% 20%;
+  --destructive: 0 70% 55%; /* Soft red */
+  --destructive-foreground: 0 0% 100%;
+  --ring: 215 25% 50%;
 
   --radius: 0.75rem;
 }
@@ -29,4 +30,6 @@
   border-color: hsl(var(--border));
 }
 
-body { @apply bg-background text-foreground; }
+body {
+  @apply bg-background text-foreground antialiased;
+}
