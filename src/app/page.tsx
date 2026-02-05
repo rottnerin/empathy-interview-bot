@@ -307,133 +307,172 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
   }
 
   return (
-    <main className="h-screen flex flex-col">
-      <header className="flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 px-6 py-4 border-b border-orange-200 flex-shrink-0">
-        <h1 className="text-2xl font-semibold text-amber-900">Empathy Interview Bot</h1>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-amber-700">
-            <User className="h-4 w-4" />
-            <span>{guestAccess ? 'Guest (AIFE Yokohoma)' : session?.user?.name || session?.user?.email}</span>
-          </div>
-          <div className="flex items-center gap-2 relative" ref={downloadOptionsRef}>
-            <Button
-              onClick={() => setShowDownloadOptions(!showDownloadOptions)}
-              variant="secondary"
-              className="relative"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download Transcript
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
+    <main className="h-screen flex bg-slate-900">
+      {/* Left Sidebar */}
+      <aside className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-slate-700">
+          <h1 className="text-lg font-semibold text-white">Empathy Bot</h1>
+          <p className="text-xs text-slate-400">Interview Practice Session</p>
+        </div>
 
-            {showDownloadOptions && (
-              <div className="absolute top-full right-0 mt-2 bg-white border border-orange-200 rounded-lg shadow-lg z-10 min-w-[180px]">
-                <Button
-                  onClick={downloadTranscriptTXT}
-                  variant="ghost"
-                  className="w-full justify-start text-left hover:bg-orange-50 rounded-none rounded-t-lg"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download as TXT
-                </Button>
-                <Button
-                  onClick={downloadTranscriptPDF}
-                  variant="ghost"
-                  className="w-full justify-start text-left hover:bg-orange-50 rounded-none rounded-b-lg border-t border-orange-100"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download as PDF
-                </Button>
-              </div>
-            )}
+        {/* Persona Section */}
+        <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+          {/* Circular Profile Image */}
+          <div className="flex justify-center">
+            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-slate-600 bg-slate-700">
+              {imageUrl ? (
+                <Image src={imageUrl} alt="Persona portrait" fill className="object-cover" priority unoptimized />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
+                  {loadingPersona ? 'Loading...' : 'No image'}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Name and Age */}
+          <div className="text-center">
+            <div className="text-white font-semibold text-lg">{persona?.name ?? 'Loading...'}</div>
+            <div className="text-slate-400 text-sm">Age {persona?.age ?? '—'}</div>
+          </div>
+
+          {/* Scenario */}
+          <div className="bg-slate-700/50 rounded-lg p-3">
+            <div className="text-xs font-semibold text-slate-300 uppercase mb-2">Scenario</div>
+            <div className="text-sm text-slate-300 leading-relaxed">
+              You are interviewing {persona?.name || 'Mateo Alvarez'} to understand their perspectives and feelings. Ask open-ended questions.
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Buttons */}
+        <div className="p-4 space-y-2 border-t border-slate-700">
+          <Button
+            onClick={() => {}}
+            variant="ghost"
+            className="w-full justify-start text-slate-300 hover:bg-slate-700"
+          >
+            <User className="h-4 w-4 mr-2" />
+            {guestAccess ? 'Guest User' : session?.user?.name || 'User'}
+          </Button>
+          <Button
+            onClick={() => setShowDownloadOptions(!showDownloadOptions)}
+            variant="ghost"
+            className="w-full justify-start text-slate-300 hover:bg-slate-700 relative"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Transcript
+          </Button>
+          {showDownloadOptions && (
+            <div className="absolute bottom-32 left-4 bg-slate-700 border border-slate-600 rounded-lg shadow-lg z-10 min-w-[200px]">
+              <Button
+                onClick={downloadTranscriptTXT}
+                variant="ghost"
+                className="w-full justify-start text-left text-slate-300 hover:bg-slate-600 rounded-none rounded-t-lg"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download as TXT
+              </Button>
+              <Button
+                onClick={downloadTranscriptPDF}
+                variant="ghost"
+                className="w-full justify-start text-left text-slate-300 hover:bg-slate-600 rounded-none rounded-b-lg border-t border-slate-600"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download as PDF
+              </Button>
+            </div>
+          )}
+          <Button
+            onClick={() => setShowConfirmDone(true)}
+            variant="ghost"
+            className="w-full justify-start text-green-400 hover:bg-slate-700"
+            disabled={messages.length === 0}
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            I'm Done
+          </Button>
           <Button
             onClick={handleSignOut}
             variant="ghost"
-            className="text-amber-700 hover:bg-orange-100"
+            className="w-full justify-start text-red-400 hover:bg-slate-700"
           >
             <LogOut className="h-4 w-4 mr-2" />
-            {guestAccess ? 'Return to Sign In' : 'Sign Out'}
+            End Session
           </Button>
         </div>
-      </header>
+      </aside>
 
-      <section className="flex-1 flex flex-col lg:grid lg:grid-cols-[500px_1fr] overflow-hidden">
-        <div className="p-4 lg:p-6 flex lg:flex-col space-x-4 lg:space-x-0 lg:space-y-4 border-b lg:border-b-0 lg:border-r border-orange-200 bg-gradient-to-b from-orange-25 to-amber-25 flex-shrink-0">
-          <div className="relative w-80 h-80 lg:w-full lg:aspect-[3/4] overflow-hidden rounded-lg border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg flex-shrink-0">
-            {imageUrl ? (
-              <Image src={imageUrl} alt="Persona portrait" fill className="object-contain" priority unoptimized />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs lg:text-sm text-amber-700">{loadingPersona ? 'Generating...' : 'No image'}</div>
-            )}
-          </div>
-          <div className="text-sm bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 flex-1 lg:flex-none">
-            <div className="font-bold text-lg text-amber-900 mb-2">{persona?.name ?? '—'}</div>
-            <div className="text-amber-700 mb-3">Age {persona?.age ?? '—'}</div>
-
-            {persona && (
-              <div className="text-xs text-amber-800 space-y-2 border-t border-orange-200 pt-3">
-                <div className="font-medium text-amber-900 mb-2">About Mateo</div>
-
-                <div><span className="font-semibold">City:</span> Madrid, Spain</div>
-                <div><span className="font-semibold">School:</span> Grade 10 High School Student</div>
-                <div><span className="font-semibold">Language:</span> Spanish (native), English</div>
-
-                <div className="pt-2">
-                  <div className="font-semibold text-amber-900 mb-1">Hobbies:</div>
-                  <div className="text-amber-700">
-                    Futsal, coding, gaming, YouTube, and hanging out with friends
+      {/* Right Chat Area */}
+      <div className="flex-1 flex flex-col bg-slate-900">
+        {/* Chat Messages */}
+        <div
+          ref={chatContainerRef}
+          className="flex-1 p-6 space-y-4 overflow-y-auto"
+        >
+          {messages.map((m, i) => (
+            <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              {/* Avatar */}
+              <div className="flex-shrink-0">
+                {m.role === 'assistant' ? (
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-600 bg-slate-700">
+                    {imageUrl ? (
+                      <Image src={imageUrl} alt="Persona" width={40} height={40} className="object-cover" unoptimized />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">?</div>
+                    )}
                   </div>
-                </div>
-
-                <div className="pt-2">
-                  <div className="font-semibold text-amber-900 mb-1">Personality:</div>
-                  <div className="text-amber-700">
-                    Friendly, quick-witted, athletic, and energetic
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-semibold">
+                    U
                   </div>
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
 
-        <div className="flex flex-col h-full">
-          <div
-            ref={chatContainerRef}
-            className="flex-1 p-6 space-y-6 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-white/50 to-orange-50/30 min-h-0"
-            style={{ maxHeight: 'calc(100vh - 200px)' }}
-          >
-            {messages.map((m, i) => (
-              <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className="text-sm font-medium text-muted-foreground mb-2">
-                  {m.role === 'user' ? 'Student' : persona?.name || 'Persona'}
-                </div>
-                <div className={`px-4 py-3 rounded-lg max-w-[85%] shadow-sm ${m.role === 'user'
-                    ? 'bg-amber-600 text-white shadow-amber-200'
-                    : 'bg-orange-50 text-amber-900 border border-orange-200 shadow-orange-100'
-                  }`}>
-                  <div className="text-base leading-relaxed whitespace-pre-wrap">{m.content}</div>
+              {/* Message Bubble */}
+              <div className="flex flex-col max-w-[70%]">
+                <div className={`px-4 py-3 rounded-2xl ${
+                  m.role === 'user'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-slate-700 text-slate-200'
+                }`}>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</div>
                 </div>
                 {m.role === 'assistant' && (
-                  <div className="mt-2">
+                  <div className="mt-1 ml-2">
                     {speakingMessageIndex === i ? (
-                      <Button variant="ghost" onClick={stopSpeaking} className="text-sm px-3 py-1 h-8 text-amber-700">
-                        <Square className="h-3 w-3 mr-1" />Stop TTS
+                      <Button
+                        variant="ghost"
+                        onClick={stopSpeaking}
+                        className="text-xs px-2 py-1 h-auto text-slate-400 hover:text-slate-200"
+                      >
+                        <Square className="h-3 w-3 mr-1" />
+                        Stop
                       </Button>
                     ) : (
-                      <Button variant="ghost" onClick={() => speak(m.content, i)} className="text-sm px-3 py-1 h-8">
+                      <Button
+                        variant="ghost"
+                        onClick={() => speak(m.content, i)}
+                        className="text-xs px-2 py-1 h-auto text-slate-400 hover:text-slate-200"
+                      >
                         Play
                       </Button>
                     )}
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-          <div className="p-4 border-t border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 flex-shrink-0">
-            <div className="space-y-3">
-              <Textarea
-                placeholder="Ask your question..."
+            </div>
+          ))}
+        </div>
+
+        {/* Input Area */}
+        <div className="p-4 border-t border-slate-700">
+          <div className="flex items-center gap-3">
+            <Recorder onTranscript={t => setInput(t)} />
+            <div className="flex-1 relative">
+              <Input
+                placeholder={`Ask ${persona?.name || 'Mateo Alvarez'}...`}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => {
@@ -442,43 +481,45 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
                     send(input)
                   }
                 }}
-                className="min-h-[60px] max-h-[120px] resize-none"
-                rows={2}
+                className="bg-slate-800 border-slate-600 text-white placeholder:text-slate-400 pr-10"
               />
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Recorder onTranscript={t => setInput(t)} />
-                  <Speaker url={speakingUrl} onStop={stopSpeaking} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-amber-700 hidden lg:inline">Shift+Enter for new line</span>
-                  <Button
-                    onClick={() => setShowConfirmDone(true)}
-                    variant="ghost"
-                    className="text-amber-800 hover:bg-amber-100 border border-amber-200"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Done
-                  </Button>
-                  <Button onClick={() => send(input)} aria-label="Send"><Send className="h-4 w-4 mr-2" />Send</Button>
-                </div>
-              </div>
+              <button
+                onClick={() => send(input)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <Send className="h-5 w-5" />
+              </button>
             </div>
+            <Speaker url={speakingUrl} onStop={stopSpeaking} />
+          </div>
+          <div className="mt-2 text-xs text-slate-500 text-center">
+            AI may produce inaccurate information that generates credible-sounding but incorrect or nonsensical answers
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Confirmation Modal */}
       {showConfirmDone && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-orange-100">
-            <h3 className="text-xl font-bold text-amber-900 mb-2">Finish Interview?</h3>
-            <p className="text-amber-700 mb-6">
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-600">
+            <h3 className="text-xl font-bold text-white mb-2">Finish Interview?</h3>
+            <p className="text-slate-300 mb-6">
               Are you sure you want to end the session? We'll generate an analysis of your empathy interviewing skills.
             </p>
             <div className="flex justify-end gap-3">
-              <Button onClick={() => setShowConfirmDone(false)} variant="ghost">Cancel</Button>
-              <Button onClick={finishInterview}>Yes, Analyze</Button>
+              <Button
+                onClick={() => setShowConfirmDone(false)}
+                variant="ghost"
+                className="text-slate-300 hover:bg-slate-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={finishInterview}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Yes, Analyze
+              </Button>
             </div>
           </div>
         </div>
@@ -486,47 +527,47 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
 
       {/* Loading Modal */}
       {isAnalyzing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl p-8 shadow-2xl border border-orange-100 text-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-600 mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold text-amber-900">Analyzing your interview...</h3>
-            <p className="text-amber-600">Generating feedback on your technique.</p>
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl p-8 shadow-2xl border border-slate-600 text-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-white">Analyzing your interview...</h3>
+            <p className="text-slate-400">Generating feedback on your technique.</p>
           </div>
         </div>
       )}
 
       {/* Analysis Results Modal */}
       {analysis && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-orange-100 flex flex-col">
-            <div className="p-6 border-b border-orange-100 flex justify-between items-center bg-gradient-to-r from-orange-50 to-amber-50">
-              <h2 className="text-2xl font-bold text-amber-900 flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-orange-600" />
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-600 flex flex-col">
+            <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-700/50">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Trophy className="h-6 w-6 text-purple-400" />
                 Interview Analysis
               </h2>
-              <button onClick={() => setAnalysis(null)} className="text-amber-500 hover:text-amber-700">
+              <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-white">
                 <X className="h-6 w-6" />
               </button>
             </div>
 
             <div className="p-6 space-y-6">
               {/* Score Section */}
-              <div className="flex items-center justify-center p-6 bg-orange-50 rounded-xl border border-orange-200">
+              <div className="flex items-center justify-center p-6 bg-slate-700/50 rounded-xl border border-slate-600">
                 <div className="text-center">
-                  <div className="text-sm font-medium text-amber-600 uppercase tracking-wide">Overall Score</div>
-                  <div className="text-5xl font-bold text-amber-900 mt-2">{analysis.score}/10</div>
+                  <div className="text-sm font-medium text-purple-400 uppercase tracking-wide">Overall Score</div>
+                  <div className="text-5xl font-bold text-white mt-2">{analysis.score}/10</div>
                 </div>
               </div>
 
               {/* Strengths */}
               <div>
-                <h3 className="text-lg font-semibold text-green-700 flex items-center gap-2 mb-3">
+                <h3 className="text-lg font-semibold text-green-400 flex items-center gap-2 mb-3">
                   <CheckCircle className="h-5 w-5" /> Strengths
                 </h3>
                 <ul className="space-y-2">
                   {analysis.strengths.map((s, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-slate-700 bg-green-50 p-3 rounded-lg border border-green-100">
-                      <span className="text-green-500 font-bold">•</span> {s}
+                    <li key={i} className="flex gap-2 text-sm text-slate-200 bg-green-900/20 p-3 rounded-lg border border-green-800/30">
+                      <span className="text-green-400 font-bold">•</span> {s}
                     </li>
                   ))}
                 </ul>
@@ -534,21 +575,26 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
 
               {/* Weaknesses / Improvements */}
               <div>
-                <h3 className="text-lg font-semibold text-orange-700 flex items-center gap-2 mb-3">
+                <h3 className="text-lg font-semibold text-orange-400 flex items-center gap-2 mb-3">
                   <Target className="h-5 w-5" /> Areas for Improvement
                 </h3>
                 <ul className="space-y-2">
                   {analysis.weaknesses.map((w, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-slate-700 bg-orange-50 p-3 rounded-lg border border-orange-100">
-                      <span className="text-orange-500 font-bold">•</span> {w}
+                    <li key={i} className="flex gap-2 text-sm text-slate-200 bg-orange-900/20 p-3 rounded-lg border border-orange-800/30">
+                      <span className="text-orange-400 font-bold">•</span> {w}
                     </li>
                   ))}
                 </ul>
               </div>
             </div>
 
-            <div className="p-4 border-t border-orange-100 bg-gray-50 rounded-b-xl flex justify-end">
-              <Button onClick={() => setAnalysis(null)}>Close</Button>
+            <div className="p-4 border-t border-slate-700 bg-slate-700/30 rounded-b-xl flex justify-end">
+              <Button
+                onClick={() => setAnalysis(null)}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Close
+              </Button>
             </div>
           </div>
         </div>
