@@ -20,7 +20,7 @@ export default function HomePage() {
   // Persisted messages state from HEAD
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('empathy-chat-messages')
+      const saved = sessionStorage.getItem('empathy-chat-messages')
       return saved ? JSON.parse(saved) : []
     }
     return []
@@ -48,7 +48,7 @@ export default function HomePage() {
   // Persistence Effect from HEAD
   useEffect(() => {
     if (messages.length > 0) {
-      localStorage.setItem('empathy-chat-messages', JSON.stringify(messages))
+      sessionStorage.setItem('empathy-chat-messages', JSON.stringify(messages))
     }
   }, [messages])
 
@@ -82,12 +82,6 @@ export default function HomePage() {
     if (guestAccess && typeof window !== 'undefined') {
       localStorage.removeItem('guest_access')
       setGuestAccess(false)
-    }
-
-    // Verify domain restriction
-    if (session && session.user?.email && !session.user.email.endsWith('@aes.ac.in')) {
-      signOut({ callbackUrl: '/auth/error?error=AccessDenied' })
-      return
     }
 
     // Generate default persona on first load if authenticated
@@ -131,7 +125,7 @@ export default function HomePage() {
 
       if (clearChat) {
         setMessages([])
-        localStorage.removeItem('empathy-chat-messages')
+        sessionStorage.removeItem('empathy-chat-messages')
       } else if (messages.length === 0) {
         // If it's a fresh load, maybe clear standard
         setMessages([])

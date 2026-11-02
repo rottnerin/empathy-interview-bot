@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const transcript = history.map((m: any) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
 
     const completion = await openai.chat.completions.create({
-        model: 'gpt-4o', // or gpt-4-turbo, using a capable model for analysis
+        model: 'gpt-5-mini',
         messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: `Here is the interview transcript:\n\n${transcript}` }
