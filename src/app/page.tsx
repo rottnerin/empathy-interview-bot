@@ -79,6 +79,9 @@ export default function HomePage() {
       return
     }
 
+    // Wait for the session check; clearing guest access while it loads logs guests out on refresh
+    if (status === 'loading') return
+
     if (guestAccess && typeof window !== 'undefined') {
       localStorage.removeItem('guest_access')
       setGuestAccess(false)

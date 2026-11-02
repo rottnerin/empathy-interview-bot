@@ -17,7 +17,8 @@ Your job is to analyze an interview transcript and provide constructive, specifi
 5. **Rapport:** Did you build trust and make the interviewee feel heard?
 
 **Output Format:**
-Return a JSON object with two fields:
+Return a JSON object with three fields:
+- "score": A whole number from 0 to 10 rating the overall quality of the empathy interview (0 = no empathy technique, 10 = exceptional). Be honest: a very short interview with only one or two questions should score low.
 - "strengths": An array of strings highlighting good techniques you used. Address the interviewer as "You".
 - "weaknesses": An array of strings highlighting missed opportunities or areas to improve. Address the interviewer as "You".
 `
