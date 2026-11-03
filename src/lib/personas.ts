@@ -144,6 +144,7 @@ export const PERSONAS: Persona[] = [
     name: 'Sofia Chen',
     age: 14,
     tagline: 'Grade 9 student from Singapore',
+    imageUrl: '/sofia.png',
     prompt: sofiaPrompt,
     truths: [
       {
@@ -173,6 +174,7 @@ export const PERSONAS: Persona[] = [
     name: 'Kenji Watanabe',
     age: 16,
     tagline: 'Grade 11 student from Yokohama',
+    imageUrl: '/kenji.png',
     prompt: kenjiPrompt,
     truths: [
       {
