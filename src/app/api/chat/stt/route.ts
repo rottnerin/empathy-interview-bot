@@ -11,11 +11,15 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(arrayBuffer)
 
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  const transcription = await client.audio.transcriptions.create({
-    file: await toFile(buffer, file.name || 'input.webm', { type: file.type || 'audio/webm' }),
-    model: 'gpt-4o-mini-transcribe',
-    response_format: 'json'
-  } as any)
+  try {
+    const transcription = await client.audio.transcriptions.create({
+      file: await toFile(buffer, file.name || 'input.webm', { type: file.type || 'audio/webm' }),
+      model: 'gpt-4o-mini-transcribe',
+      response_format: 'json'
+    } as any)
 
-  return NextResponse.json({ text: (transcription as any).text || '' })
+    return NextResponse.json({ text: (transcription as any).text || '' })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }

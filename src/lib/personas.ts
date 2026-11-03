@@ -16,6 +16,9 @@ export type Persona = {
   age: number
   tagline: string
   imageUrl?: string
+  // Text-to-speech voice and delivery notes, so each character sounds like themselves
+  voice: string
+  voiceStyle: string
   prompt: string
   truths: Truth[]
 }
@@ -115,6 +118,8 @@ export const PERSONAS: Persona[] = [
     age: 15,
     tagline: 'Grade 10 student from Madrid',
     imageUrl: '/mateo.png',
+    voice: 'echo',
+    voiceStyle: 'A casual, quick-witted 15-year-old Spanish boy speaking English. Friendly, relaxed pace, a little defensive about his habits, light Spanish accent. Sound like a teenager chatting, not reading aloud.',
     prompt: mateoPrompt,
     truths: [
       {
@@ -145,6 +150,8 @@ export const PERSONAS: Persona[] = [
     age: 14,
     tagline: 'Grade 9 student from Singapore',
     imageUrl: '/sofia.png',
+    voice: 'nova',
+    voiceStyle: 'A soft-spoken, polite 14-year-old girl from Singapore speaking English. Hesitant and careful, naturally says "um" and trails off, quiet and a little nervous. Sound like a teenager, not reading aloud.',
     prompt: sofiaPrompt,
     truths: [
       {
@@ -175,6 +182,8 @@ export const PERSONAS: Persona[] = [
     age: 16,
     tagline: 'Grade 11 student from Yokohama',
     imageUrl: '/kenji.png',
+    voice: 'ash',
+    voiceStyle: 'An easygoing 16-year-old Japanese boy speaking English. Jokey, short phrases, light laughs, with real tiredness underneath. Sound like a teenager chatting, not reading aloud.',
     prompt: kenjiPrompt,
     truths: [
       {

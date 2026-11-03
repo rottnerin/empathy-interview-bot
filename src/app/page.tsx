@@ -85,6 +85,7 @@ export default function HomePage() {
   const [focus, setFocus] = useState('')
   const [previous, setPrevious] = useState<Attempt | null>(null)
   const [chatError, setChatError] = useState(false)
+  const [waiting, setWaiting] = useState(false)
   const startingRef = useRef(false)
 
   // Persistence Effect from HEAD
@@ -144,7 +145,7 @@ export default function HomePage() {
         behavior: 'smooth'
       })
     }
-  }, [messages])
+  }, [messages, waiting])
 
   // Download options close
   useEffect(() => {
@@ -223,6 +224,7 @@ export default function HomePage() {
     setMessages(next)
     setInput('')
     setChatError(false)
+    setWaiting(true)
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -235,15 +237,23 @@ export default function HomePage() {
     } catch (err) {
       console.error(err)
       setChatError(true)
+    } finally {
+      setWaiting(false)
     }
   }
 
   async function speak(text: string, messageIndex?: number) {
-    const res = await fetch('/api/tts', { method: 'POST', body: JSON.stringify({ text }), headers: { 'content-type': 'application/json' } })
-    const blob = await res.blob()
-    const url = URL.createObjectURL(blob)
-    setSpeakingUrl(url)
-    setSpeakingMessageIndex(messageIndex)
+    try {
+      const res = await fetch('/api/tts', { method: 'POST', body: JSON.stringify({ text, personaId: persona?.id }), headers: { 'content-type': 'application/json' } })
+      if (!res.ok) throw new Error('Text-to-speech failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      setSpeakingUrl(url)
+      setSpeakingMessageIndex(messageIndex)
+    } catch (err) {
+      console.error(err)
+      setChatError(true)
+    }
   }
 
   function stopSpeaking() {
@@ -424,7 +434,7 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
         <div className="flex-1 p-4 space-y-4 overflow-y-auto">
           {/* Circular Profile Image */}
           <div className="flex justify-center">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-slate-600 bg-slate-700">
+            <div className={`relative w-32 h-32 rounded-full overflow-hidden border-2 bg-slate-700 ${speakingUrl ? 'border-purple-400 ring-4 ring-purple-500/40 animate-pulse' : 'border-slate-600'}`}>
               {imageUrl ? (
                 <Image src={imageUrl} alt="Persona portrait" fill className="object-cover" priority unoptimized />
               ) : (
@@ -572,7 +582,7 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
                 {m.role === 'assistant' ? (
                   <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-600 bg-slate-700">
                     {imageUrl ? (
-                      <Image src={imageUrl} alt="Persona" width={40} height={40} className="object-cover" unoptimized />
+                      <Image src={imageUrl} alt="Persona" width={40} height={40} className="w-full h-full object-cover scale-[1.9] origin-[50%_38%]" unoptimized />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 text-white text-xs font-semibold">{initials}</div>
                     )}
@@ -618,6 +628,24 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
               </div>
             </div>
           ))}
+          {waiting && persona && (
+            <div className="flex gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-slate-600 bg-slate-700">
+                  {imageUrl ? (
+                    <Image src={imageUrl} alt="Persona" width={40} height={40} className="w-full h-full object-cover scale-[1.9] origin-[50%_38%]" unoptimized />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 text-white text-xs font-semibold">{initials}</div>
+                  )}
+                </div>
+              </div>
+              <div className="px-4 py-3 rounded-2xl bg-slate-700 text-slate-400 text-sm flex items-center gap-1" aria-label={`${persona.name} is typing`}>
+                <span className="animate-bounce" style={{ animationDelay: '0ms' }}>•</span>
+                <span className="animate-bounce" style={{ animationDelay: '150ms' }}>•</span>
+                <span className="animate-bounce" style={{ animationDelay: '300ms' }}>•</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input Area */}
