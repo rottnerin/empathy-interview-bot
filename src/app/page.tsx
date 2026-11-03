@@ -8,9 +8,39 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Button, Input, Textarea } from '@/components/ui'
 import { Recorder, Speaker } from '@/components/audio'
-import { Send, Download, Square, ChevronDown, LogOut, User, CheckCircle, AlertCircle, X, Trophy, Target } from 'lucide-react'
+import { Send, Download, Square, ChevronDown, LogOut, User, CheckCircle, AlertCircle, X, Trophy, Target, RotateCcw, BarChart3, Flag } from 'lucide-react'
+import { ResultsModal, ProgressModal } from '@/components/results'
+import { loadAttempts, saveAttempt, difficultyForAttempt, DIFFICULTY_LABEL, type Analysis, type Attempt } from '@/lib/attempts'
+import type { Difficulty } from '@/lib/personas'
 
 type Message = { role: 'user' | 'assistant', content: string }
+
+// Everything needed to resume the current interview after a page refresh (per tab)
+type SessionBlob = {
+  personaId: string
+  difficulty: Difficulty
+  attemptNumber: number
+  focus: string
+  analysis: Analysis | null
+  previous: Attempt | null
+}
+
+function readBlob(): SessionBlob | null {
+  try {
+    const raw = sessionStorage.getItem('empathy-session')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeBlob(blob: SessionBlob) {
+  try {
+    sessionStorage.setItem('empathy-session', JSON.stringify(blob))
+  } catch {
+    // Storage unavailable; refresh will just start a new interview
+  }
+}
 
 export default function HomePage() {
   const { data: session, status } = useSession()
@@ -43,7 +73,19 @@ export default function HomePage() {
   // Analysis state from My Commit
   const [showConfirmDone, setShowConfirmDone] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [analysis, setAnalysis] = useState<{ strengths: string[], weaknesses: string[], score: number } | null>(null)
+  const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [showResults, setShowResults] = useState(false)
+  const [showProgress, setShowProgress] = useState(false)
+
+  // Repetition loop state: who is practicing, how many attempts so far, and this round's goal
+  const [studentName, setStudentName] = useState('')
+  const [attempts, setAttempts] = useState<Attempt[]>([])
+  const [attemptNumber, setAttemptNumber] = useState(1)
+  const [difficulty, setDifficulty] = useState<Difficulty>('easy')
+  const [focus, setFocus] = useState('')
+  const [previous, setPrevious] = useState<Attempt | null>(null)
+  const [chatError, setChatError] = useState(false)
+  const startingRef = useRef(false)
 
   // Persistence Effect from HEAD
   useEffect(() => {
@@ -61,6 +103,7 @@ export default function HomePage() {
 
     const hasGuestAccess = localStorage.getItem('guest_access') === 'true'
     setGuestAccess(hasGuestAccess)
+    setStudentName(localStorage.getItem('student_name') || 'Guest')
     setGuestReady(true)
   }, [])
 
@@ -71,7 +114,7 @@ export default function HomePage() {
     if (status === 'unauthenticated') {
       if (guestAccess) {
         if (!persona && !loadingPersona) {
-          void generatePersona()
+          void startInterview()
         }
       } else {
         router.push('/auth/signin')
@@ -89,7 +132,7 @@ export default function HomePage() {
 
     // Generate default persona on first load if authenticated
     if (status === 'authenticated' && !persona && !loadingPersona) {
-      void generatePersona()
+      void startInterview()
     }
   }, [status, session, router, guestAccess, guestReady, persona, loadingPersona])
 
@@ -117,27 +160,60 @@ export default function HomePage() {
     }
   }, [showDownloadOptions])
 
-  async function generatePersona(seed?: string, clearChat = false) {
+  // Start a new interview, or resume the one in progress in this tab (e.g. after a refresh)
+  async function startInterview(again = false) {
+    if (startingRef.current) return
+    startingRef.current = true
     setLoadingPersona(true)
     try {
-      const res = await fetch('/api/persona', { method: 'POST', body: JSON.stringify({ seed }), headers: { 'content-type': 'application/json' } })
+      const name = studentName || 'Guest'
+      const prior = loadAttempts(name)
+      setAttempts(prior)
+
+      const blob = again ? null : readBlob()
+      const res = await fetch('/api/persona', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          personaId: blob?.personaId,
+          // Give a different interviewee each time so students can't just memorize answers
+          excludeId: persona?.id ?? prior[prior.length - 1]?.personaId
+        })
+      })
       const json = await res.json()
-      if (json.error) console.warn('Persona image error:', json.error)
+      if (json.error) throw new Error(json.error)
       setPersona(json.persona)
       setImageUrl(json.imageUrl)
 
-      if (clearChat) {
+      if (blob) {
+        setDifficulty(blob.difficulty)
+        setAttemptNumber(blob.attemptNumber)
+        setFocus(blob.focus)
+        setAnalysis(blob.analysis)
+        setPrevious(blob.previous)
+      } else {
+        const number = prior.length + 1
+        const level = difficultyForAttempt(number)
+        const goal = prior[prior.length - 1]?.nextFocus ?? ''
+        setDifficulty(level)
+        setAttemptNumber(number)
+        setFocus(goal)
+        setAnalysis(null)
+        setPrevious(null)
+        setShowResults(false)
         setMessages([])
         sessionStorage.removeItem('empathy-chat-messages')
-      } else if (messages.length === 0) {
-        // If it's a fresh load, maybe clear standard
-        setMessages([])
+        writeBlob({ personaId: json.persona.id, difficulty: level, attemptNumber: number, focus: goal, analysis: null, previous: null })
       }
 
+      setChatError(false)
       setSpeakingUrl(undefined)
       setSpeakingMessageIndex(undefined)
+    } catch (err) {
+      console.error(err)
     } finally {
       setLoadingPersona(false)
+      startingRef.current = false
     }
   }
 
@@ -146,15 +222,20 @@ export default function HomePage() {
     const next = [...messages, { role: 'user', content: text } as Message]
     setMessages(next)
     setInput('')
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ persona, history: next, user: text })
-    })
-    const json = await res.json()
-    const reply = json.text as string
-    const updated = [...next, { role: 'assistant', content: reply } as Message]
-    setMessages(updated)
+    setChatError(false)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ personaId: persona.id, difficulty, history: messages, user: text })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.text) throw new Error(json.error || 'No reply')
+      setMessages([...next, { role: 'assistant', content: json.text as string } as Message])
+    } catch (err) {
+      console.error(err)
+      setChatError(true)
+    }
   }
 
   async function speak(text: string, messageIndex?: number) {
@@ -176,11 +257,33 @@ export default function HomePage() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        body: JSON.stringify({ history: messages }),
+        body: JSON.stringify({ history: messages, personaId: persona?.id, previousFocus: focus || undefined }),
         headers: { 'content-type': 'application/json' }
       })
-      const data = await res.json()
+      const data: Analysis & { error?: string } = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed')
+
+      // Save this attempt so progress shows up across interviews
+      const prev = attempts[attempts.length - 1] ?? null
+      const attempt: Attempt = {
+        id: String(Date.now()),
+        date: new Date().toISOString(),
+        personaId: persona.id,
+        personaName: persona.name,
+        difficulty,
+        score: data.score,
+        skills: data.skills,
+        truthsFound: data.truths.filter(t => t.found).length,
+        truthsTotal: data.truths.length,
+        nextFocus: data.nextFocus,
+        focusMet: data.focusMet ? data.focusMet.met : null,
+      }
+      saveAttempt(studentName || 'Guest', attempt)
+      setAttempts(a => [...a, attempt])
+      setPrevious(prev)
       setAnalysis(data)
+      setShowResults(true)
+      writeBlob({ personaId: persona.id, difficulty, attemptNumber, focus, analysis: data, previous: prev })
     } catch (err) {
       console.error(err)
       alert('Failed to analyze interview')
@@ -295,6 +398,8 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
     if (guestAccess) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('guest_access')
+        sessionStorage.removeItem('empathy-session')
+        sessionStorage.removeItem('empathy-chat-messages')
       }
       setGuestAccess(false)
       router.push('/auth/signin')
@@ -302,6 +407,8 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
       await signOut({ callbackUrl: '/auth/signin' })
     }
   }
+
+  const initials = (persona?.name as string | undefined)?.split(' ').map(w => w[0]).join('').slice(0, 2) ?? '?'
 
   return (
     <main className="h-screen flex bg-slate-900">
@@ -321,8 +428,8 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
               {imageUrl ? (
                 <Image src={imageUrl} alt="Persona portrait" fill className="object-cover" priority unoptimized />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
-                  {loadingPersona ? 'Loading...' : 'No image'}
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 text-white text-3xl font-semibold">
+                  {loadingPersona ? <span className="text-xs text-slate-200 font-normal">Loading...</span> : initials}
                 </div>
               )}
             </div>
@@ -331,14 +438,28 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
           {/* Name and Age */}
           <div className="text-center">
             <div className="text-white font-semibold text-lg">{persona?.name ?? 'Loading...'}</div>
-            <div className="text-slate-400 text-sm">Age {persona?.age ?? '—'}</div>
+            <div className="text-slate-400 text-sm">Age {persona?.age ?? '—'}{persona?.tagline ? ` · ${persona.tagline}` : ''}</div>
+            <div className="mt-2 inline-flex items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded-full bg-purple-600/30 text-purple-200">Attempt #{attemptNumber}</span>
+              <span className="px-2 py-1 rounded-full bg-slate-700 text-slate-300">{DIFFICULTY_LABEL[difficulty]}</span>
+            </div>
           </div>
+
+          {/* This round's goal (from the last interview's feedback) */}
+          {focus && !analysis && (
+            <div className="bg-purple-600/15 border border-purple-500/40 rounded-lg p-3">
+              <div className="text-xs font-semibold text-purple-300 uppercase mb-1 flex items-center gap-1">
+                <Flag className="h-3 w-3" /> Your goal this round
+              </div>
+              <div className="text-sm text-slate-100 leading-relaxed">{focus}</div>
+            </div>
+          )}
 
           {/* Scenario */}
           <div className="bg-slate-700/50 rounded-lg p-3">
             <div className="text-xs font-semibold text-slate-300 uppercase mb-2">Scenario</div>
             <div className="text-sm text-slate-300 leading-relaxed">
-              You are interviewing {persona?.name || 'Mateo Alvarez'} to understand their perspectives and feelings. Ask open-ended questions.
+              You are interviewing {persona?.name || 'a student'} to understand their perspectives and feelings. Ask open-ended questions, and see how many of their hidden struggles you can uncover.
             </div>
           </div>
         </div>
@@ -351,7 +472,7 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
             className="w-full justify-start text-slate-300 hover:bg-slate-700"
           >
             <User className="h-4 w-4 mr-2" />
-            {guestAccess ? 'Guest User' : session?.user?.name || 'User'}
+            {guestAccess ? (studentName || 'Guest') : session?.user?.name || 'User'}
           </Button>
           <Button
             onClick={() => setShowDownloadOptions(!showDownloadOptions)}
@@ -382,14 +503,42 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
             </div>
           )}
           <Button
-            onClick={() => setShowConfirmDone(true)}
+            onClick={() => setShowProgress(true)}
             variant="ghost"
-            className="w-full justify-start text-green-400 hover:bg-slate-700"
-            disabled={messages.length === 0}
+            className="w-full justify-start text-slate-300 hover:bg-slate-700"
           >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            I'm Done
+            <BarChart3 className="h-4 w-4 mr-2" />
+            My Progress
           </Button>
+          {analysis ? (
+            <>
+              <Button
+                onClick={() => setShowResults(true)}
+                variant="ghost"
+                className="w-full justify-start text-green-400 hover:bg-slate-700"
+              >
+                <Trophy className="h-4 w-4 mr-2" />
+                View Results
+              </Button>
+              <Button
+                onClick={() => startInterview(true)}
+                className="w-full justify-start bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Interview Again
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={() => setShowConfirmDone(true)}
+              variant="ghost"
+              className="w-full justify-start text-green-400 hover:bg-slate-700"
+              disabled={messages.length === 0}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              I'm Done
+            </Button>
+          )}
           <Button
             onClick={handleSignOut}
             variant="ghost"
@@ -408,6 +557,14 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
           ref={chatContainerRef}
           className="flex-1 p-6 space-y-4 overflow-y-auto"
         >
+          {messages.length === 0 && persona && !analysis && (
+            <div className="max-w-md mx-auto mt-16 text-center text-slate-400">
+              <div className="text-slate-200 font-medium mb-1">Start the conversation with {persona.name.split(' ')[0]}</div>
+              <div className="text-sm">
+                Try opening with something like &ldquo;Tell me about the last time...&rdquo; to get a real story, not a general answer.
+              </div>
+            </div>
+          )}
           {messages.map((m, i) => (
             <div key={i} className={`flex gap-3 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}>
               {/* Avatar */}
@@ -417,7 +574,7 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
                     {imageUrl ? (
                       <Image src={imageUrl} alt="Persona" width={40} height={40} className="object-cover" unoptimized />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">?</div>
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-600 text-white text-xs font-semibold">{initials}</div>
                     )}
                   </div>
                 ) : (
@@ -469,7 +626,7 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
             <Recorder onTranscript={t => setInput(t)} />
             <div className="flex-1 relative">
               <Input
-                placeholder={`Ask ${persona?.name || 'Mateo Alvarez'}...`}
+                placeholder={`Ask ${persona?.name || 'your interviewee'}...`}
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => {
@@ -489,6 +646,11 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
             </div>
             <Speaker url={speakingUrl} onStop={stopSpeaking} />
           </div>
+          {chatError && (
+            <div className="mt-2 text-xs text-red-400 text-center">
+              Something went wrong sending that. Please try again.
+            </div>
+          )}
           <div className="mt-2 text-xs text-slate-500 text-center">
             AI may produce inaccurate information that generates credible-sounding but incorrect or nonsensical answers
           </div>
@@ -534,67 +696,20 @@ Persona: ${persona?.name || 'Unknown'} (Age ${persona?.age || 'Unknown'})
       )}
 
       {/* Analysis Results Modal */}
-      {analysis && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-600 flex flex-col">
-            <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-700/50">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-purple-400" />
-                Interview Analysis
-              </h2>
-              <button onClick={() => setAnalysis(null)} className="text-slate-400 hover:text-white">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+      {analysis && showResults && (
+        <ResultsModal
+          analysis={analysis}
+          previous={previous ?? undefined}
+          attemptNumber={attemptNumber}
+          personaName={persona?.name ?? ''}
+          onClose={() => setShowResults(false)}
+          onAgain={() => startInterview(true)}
+        />
+      )}
 
-            <div className="p-6 space-y-6">
-              {/* Score Section */}
-              <div className="flex items-center justify-center p-6 bg-slate-700/50 rounded-xl border border-slate-600">
-                <div className="text-center">
-                  <div className="text-sm font-medium text-purple-400 uppercase tracking-wide">Overall Score</div>
-                  <div className="text-5xl font-bold text-white mt-2">{analysis.score}/10</div>
-                </div>
-              </div>
-
-              {/* Strengths */}
-              <div>
-                <h3 className="text-lg font-semibold text-green-400 flex items-center gap-2 mb-3">
-                  <CheckCircle className="h-5 w-5" /> Strengths
-                </h3>
-                <ul className="space-y-2">
-                  {analysis.strengths.map((s, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-slate-200 bg-green-900/20 p-3 rounded-lg border border-green-800/30">
-                      <span className="text-green-400 font-bold">•</span> {s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Weaknesses / Improvements */}
-              <div>
-                <h3 className="text-lg font-semibold text-orange-400 flex items-center gap-2 mb-3">
-                  <Target className="h-5 w-5" /> Areas for Improvement
-                </h3>
-                <ul className="space-y-2">
-                  {analysis.weaknesses.map((w, i) => (
-                    <li key={i} className="flex gap-2 text-sm text-slate-200 bg-orange-900/20 p-3 rounded-lg border border-orange-800/30">
-                      <span className="text-orange-400 font-bold">•</span> {w}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-slate-700 bg-slate-700/30 rounded-b-xl flex justify-end">
-              <Button
-                onClick={() => setAnalysis(null)}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Progress Modal */}
+      {showProgress && (
+        <ProgressModal name={studentName || 'Guest'} attempts={attempts} onClose={() => setShowProgress(false)} />
       )}
     </main>
   )

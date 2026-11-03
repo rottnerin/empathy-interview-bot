@@ -1,12 +1,13 @@
 "use client"
 
 import { getSession } from 'next-auth/react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 
 export default function SignInPage() {
   const router = useRouter()
+  const [name, setName] = useState('')
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -18,8 +19,12 @@ export default function SignInPage() {
   }, [router])
 
   const handleEdEventsAccess = () => {
+    if (!name.trim()) return
     if (typeof window !== 'undefined') {
       localStorage.setItem('guest_access', 'true')
+      // Progress is tracked per name, so students can see improvement across attempts
+      localStorage.setItem('student_name', name.trim())
+      sessionStorage.removeItem('empathy-session')
       // Every sign-in starts a fresh interview
       sessionStorage.removeItem('empathy-chat-messages')
     }
@@ -43,13 +48,24 @@ export default function SignInPage() {
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome</h3>
               <p className="text-sm text-gray-600">
-                Continue to access the empathy interview bot.
+                Enter your name to start practicing. Each interview you finish is saved so you can watch yourself improve.
               </p>
             </div>
+
+            <Input
+              placeholder="Your first name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleEdEventsAccess() }}
+              maxLength={40}
+              autoFocus
+              className="border-orange-300 text-gray-900"
+            />
 
             <Button
               onClick={handleEdEventsAccess}
               variant="secondary"
+              disabled={!name.trim()}
               className="w-full border-orange-300 text-amber-900 hover:bg-orange-50"
             >
               Ed Events
