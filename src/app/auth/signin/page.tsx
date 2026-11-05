@@ -69,7 +69,7 @@ export default function SignInPage() {
               disabled={!name.trim()}
               className="w-full border-orange-300 text-amber-900 hover:bg-orange-50"
             >
-              Ed Events
+              Enter
             </Button>
           </div>
         </div>
